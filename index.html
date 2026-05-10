@@ -94,6 +94,35 @@ select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--
 .toast-row{height:36px;position:relative;margin-bottom:.25rem;}
 .toast{position:absolute;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;padding:7px 20px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;display:flex;align-items:center;gap:6px;}
 .toast.show{opacity:1;}
+.days-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-bottom:1.25rem;}
+.day-pill{padding:8px 4px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .15s;font-family:inherit;}
+.day-pill:hover{background:var(--surface2);}
+.day-pill.active{border-color:var(--accent);background:var(--accent-l);}
+.day-pill .dn{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);}
+.day-pill .dd{font-size:16px;font-weight:500;color:var(--text);margin-top:2px;}
+.day-pill.active .dn,.day-pill.active .dd{color:var(--accent-d);}
+.day-pill.has-ev::after{content:'';display:block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin:3px auto 0;}
+.day-content{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:10px;}
+.day-content-header{padding:10px 14px;background:var(--surface2);border-bottom:0.5px solid var(--border);font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;justify-content:space-between;}
+.day-content-body{padding:12px 14px;}
+.ev-item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:0.5px solid var(--border);}
+.ev-item:last-child{border-bottom:none;}
+.ev-time-badge{font-size:11px;font-weight:500;color:var(--accent-d);background:var(--accent-l);padding:2px 8px;border-radius:99px;white-space:nowrap;margin-top:1px;}
+.ev-info{flex:1;}
+.ev-info-title{font-size:13px;font-weight:500;color:var(--text);}
+.ev-info-desc{font-size:12px;color:var(--text2);margin-top:2px;}
+.ev-form{display:flex;flex-direction:column;gap:8px;padding-top:10px;}
+.einput{padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;width:100%;}
+.einput::placeholder{color:var(--text3);}
+.einput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-l);}
+.ev-row-inputs{display:flex;gap:8px;}
+.ev-row-inputs .einput{flex:1;}
+.add-ev-btn{width:100%;padding:8px;background:transparent;border:0.5px dashed var(--border2);border-radius:var(--r);color:var(--text2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .15s;font-family:inherit;margin-top:6px;}
+.add-ev-btn:hover{background:var(--surface2);color:var(--text);}
+.ev-del{background:transparent;border:none;cursor:pointer;color:var(--text3);padding:2px;flex-shrink:0;}
+.ev-del:hover{color:var(--red-t);}
+.save-day-btn{width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;transition:background .15s;font-family:inherit;}
+.save-day-btn:hover{background:var(--accent-d);}
 </style>
 </head>
 <body>
@@ -103,7 +132,7 @@ select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--
   <div class="logo"><i class="ti ti-device-tv"></i></div>
   <div class="logo-text">
     <h1>Multimedias</h1>
-    <p>Turnos · Programa · Notas</p>
+    <p>Turnos · Programa · Notas · Agenda</p>
   </div>
 </div>
 
@@ -111,6 +140,7 @@ select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--
   <button class="nav-btn active" onclick="switchTab('turnos')" id="tab-turnos"><i class="ti ti-users"></i> Turnos</button>
   <button class="nav-btn" onclick="switchTab('programa')" id="tab-programa"><i class="ti ti-music"></i> Programa</button>
   <button class="nav-btn" onclick="switchTab('notas')" id="tab-notas"><i class="ti ti-notes"></i> Notas</button>
+  <button class="nav-btn" onclick="switchTab('agenda')" id="tab-agenda"><i class="ti ti-calendar-week"></i> Agenda</button>
 </div>
 
 <div class="week-nav">
@@ -158,6 +188,12 @@ select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--
   <div class="char-count" id="char-count">0 caracteres</div>
   <button class="save-btn" onclick="saveNotes()"><i class="ti ti-device-floppy"></i> Guardar notas</button>
   <div class="toast-row"><div class="toast" id="t3"><i class="ti ti-check"></i> Notas guardadas</div></div>
+</div>
+
+<div class="section" id="sec-agenda">
+  <div class="days-strip" id="days-strip"></div>
+  <div id="agenda-day-content"></div>
+  <div class="toast-row"><div class="toast" id="t4"><i class="ti ti-check"></i> Guardado</div></div>
 </div>
 
 </div>
@@ -235,11 +271,105 @@ function updateChar(){document.getElementById('char-count').textContent=document
 function saveNotes(){localStorage.setItem(wkey(getSun(off))+'_notes',document.getElementById('notes-area').value);showToast('t3');}
 function showToast(id){const t=document.getElementById(id);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 function switchTab(tab){
-  ['turnos','programa','notas'].forEach(t=>{
+  ['turnos','programa','notas','agenda'].forEach(t=>{
     document.getElementById('sec-'+t).classList.toggle('active',t===tab);
     document.getElementById('tab-'+t).classList.toggle('active',t===tab);
   });
+  if(tab==='agenda')renderAgenda();
 }
+
+const DIAS_FULL=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DIAS_SHORT=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+let agendaDay=new Date().getDay();
+let agendaEvs={};
+
+function agendaKey(){return wkey(getSun(off))+'_agenda';}
+function loadAgenda(){agendaEvs=JSON.parse(localStorage.getItem(agendaKey())||'{}');}
+function saveAgenda(){localStorage.setItem(agendaKey(),JSON.stringify(agendaEvs));showToast('t4');}
+
+function getWeekDays(){
+  const sun=getSun(off);
+  return Array.from({length:7},(_,i)=>{const d=new Date(sun);d.setDate(sun.getDate()+i);return d;});
+}
+
+function renderAgenda(){
+  loadAgenda();
+  const days=getWeekDays();
+  const strip=document.getElementById('days-strip');
+  strip.innerHTML=days.map((d,i)=>{
+    const hasEv=(agendaEvs[i]||[]).length>0;
+    return'<button class="day-pill'+(i===agendaDay?' active':'')+(hasEv?' has-ev':'')+'" onclick="selectDay('+i+')">'+
+      '<div class="dn">'+DIAS_SHORT[i]+'</div>'+
+      '<div class="dd">'+d.getDate()+'</div>'+
+      '</button>';
+  }).join('');
+  renderDayContent();
+}
+
+function selectDay(i){agendaDay=i;renderAgenda();}
+
+function renderDayContent(){
+  const evs=agendaEvs[agendaDay]||[];
+  const dayName=DIAS_FULL[agendaDay];
+  const el=document.getElementById('agenda-day-content');
+  const evRows=evs.length
+    ?evs.map((e,i)=>'<div class="ev-item">'+
+        '<span class="ev-time-badge">'+(e.time||'Sin hora')+'</span>'+
+        '<div class="ev-info"><div class="ev-info-title">'+esc(e.title||'Sin título')+'</div>'+(e.desc?'<div class="ev-info-desc">'+esc(e.desc)+'</div>':'')+
+        '</div>'+
+        '<button class="ev-del" onclick="deleteEv('+i+')"><i class="ti ti-x" style="font-size:14px"></i></button>'+
+        '</div>').join('')
+    :'<div style="font-size:13px;color:var(--text3);text-align:center;padding:10px 0;">Sin eventos este día</div>';
+
+  el.innerHTML='<div class="day-content">'+
+    '<div class="day-content-header"><span>'+dayName+'</span><span style="font-size:11px;color:var(--text2)">'+evs.length+' evento'+(evs.length!==1?'s':'')+'</span></div>'+
+    '<div class="day-content-body">'+evRows+'</div>'+
+    '</div>'+
+    '<div class="day-content">'+
+    '<div class="day-content-header">Agregar evento</div>'+
+    '<div class="day-content-body">'+
+    '<div class="ev-form">'+
+    '<div class="ev-row-inputs">'+
+    '<input class="einput" id="ev-time" type="time" placeholder="Hora"/>'+
+    '<input class="einput" id="ev-title" type="text" placeholder="Título del evento"/>'+
+    '</div>'+
+    '<textarea class="einput" id="ev-desc" rows="2" placeholder="Descripción opcional..."></textarea>'+
+    '<button class="add-ev-btn" onclick="addEv()"><i class="ti ti-plus"></i> Agregar</button>'+
+    '<button class="save-day-btn" onclick="saveAgenda();renderAgenda()"><i class="ti ti-device-floppy"></i> Guardar</button>'+
+    '</div>'+
+    '</div>'+
+    '</div>';
+}
+
+function addEv(){
+  const time=document.getElementById('ev-time').value;
+  const title=document.getElementById('ev-title').value.trim();
+  const desc=document.getElementById('ev-desc').value.trim();
+  if(!title)return;
+  if(!agendaEvs[agendaDay])agendaEvs[agendaDay]=[];
+  agendaEvs[agendaDay].push({time,title,desc});
+  agendaEvs[agendaDay].sort((a,b)=>a.time.localeCompare(b.time));
+  renderDayContent();
+  renderStrip();
+}
+
+function deleteEv(i){
+  agendaEvs[agendaDay].splice(i,1);
+  renderDayContent();renderStrip();
+}
+
+function renderStrip(){
+  const days=getWeekDays();
+  const strip=document.getElementById('days-strip');
+  strip.innerHTML=days.map((d,i)=>{
+    const hasEv=(agendaEvs[i]||[]).length>0;
+    return'<button class="day-pill'+(i===agendaDay?' active':'')+(hasEv?' has-ev':'')+'" onclick="selectDay('+i+')">'+
+      '<div class="dn">'+DIAS_SHORT[i]+'</div>'+
+      '<div class="dd">'+d.getDate()+'</div>'+
+      '</button>';
+  }).join('');
+}
+
 load();
 </script>
 </body>
